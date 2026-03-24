@@ -1,0 +1,47 @@
+Testing Instructions for Order Form:
+
+1. Start the server:
+   bin/dev
+   (or: rails server)
+
+2. Navigate to: http://localhost:3000/orders/new
+
+3. Test "Add Product" button:
+   - Click "Add Product" button
+   - You should see a new row appear with:
+     * Product dropdown
+     * Quantity field (default: 1)
+     * Unit Price field (readonly, empty initially)
+     * Remove button
+
+4. Test product selection:
+   - Select a product from the dropdown
+   - The Unit Price field should automatically fill with the product's price
+   - The Total should update
+
+5. Test adding multiple products:
+   - Click "Add Product" again
+   - Select a different product
+   - Both items should show in the list
+   - Total should be the sum of (quantity × unit_price) for all items
+
+6. Test quantity changes:
+   - Change the quantity of any product
+   - The Total should recalculate automatically
+
+7. Test Remove button:
+   - Click "Remove" on any product row
+   - That row should disappear
+   - Total should recalculate
+
+8. Test form submission:
+   - Fill in customer information
+   - Add at least one product
+   - Click "Create Order"
+   - You should be redirected to the order show page
+
+Fixed Issues:
+- Product dropdown now properly populates when clicking "Add Product"
+- Unit price updates correctly when selecting a product
+- Total calculation works for dynamically added items
+- JavaScript properly handles all events

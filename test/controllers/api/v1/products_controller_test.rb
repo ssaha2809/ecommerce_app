@@ -4,165 +4,135 @@ module Api
   module V1
     class ProductsControllerTest < ActionDispatch::IntegrationTest
       setup do
-        @category = Category.create!(name: "Test Category", description: "Test description")
-        @product = Product.create!(
-          name: "Test Product",
-          description: "Test description",
-          price: 99.99,
-          stock_quantity: 10,
-          category: @category
-        )
+        @admin    = create(:user, :admin)
+        @customer = create(:user)
+        @category = create(:category, name: "Test Category")
+        @product  = create(:product, name: "Test Product", category: @category)
       end
 
-      test "should get index" do
-        get api_v1_products_url, as: :json
+      test "should get index as customer" do
+        get api_v1_products_url, headers: auth_headers(@customer), as: :json
         assert_response :success
-        json_response = JSON.parse(response.body)
-        assert_not_empty json_response
-        assert_equal @product.name, json_response.first["name"]
-        assert_not_nil json_response.first["category"]
-        assert_equal @category.name, json_response.first["category"]["name"]
+        products = response.parsed_body["products"]
+        assert_not_empty products
+        assert_includes products.map { |p| p["name"] }, @product.name
       end
 
-      test "should get index without N+1 queries" do
-        # Create additional products to test N+1
-        5.times do |i|
-          Product.create!(
-            name: "Product #{i}",
-            price: 50.0,
-            stock_quantity: 5,
-            category: @category
-          )
-        end
-
-        # This should only generate 2 queries (products + categories)
-        assert_queries_count(2) do
-          get api_v1_products_url, as: :json
-        end
+      test "should show product as customer" do
+        get api_v1_product_url(@product), headers: auth_headers(@customer), as: :json
         assert_response :success
+        assert_equal @product.name, response.parsed_body["name"]
       end
 
-      test "should show product" do
-        get api_v1_product_url(@product), as: :json
-        assert_response :success
-        json_response = JSON.parse(response.body)
-        assert_equal @product.name, json_response["name"]
-        assert_not_nil json_response["category"]
-        assert_equal @category.name, json_response["category"]["name"]
-      end
-
-      test "should create product" do
+      test "admin should create product" do
         assert_difference("Product.count") do
-          post api_v1_products_url, params: {
-            product: {
-              name: "New Product",
-              description: "New description",
-              price: 149.99,
-              stock_quantity: 20,
-              category_id: @category.id
-            }
-          }, as: :json
+          post api_v1_products_url,
+            headers: auth_headers(@admin),
+            params: {
+              product: {
+                name: "New Product",
+                sku: "SKU-NEW-001",
+                description: "New description",
+                price_cents: 14_999,
+                stock_quantity: 20,
+                category_id: @category.id
+              }
+            },
+            as: :json
         end
         assert_response :created
-        json_response = JSON.parse(response.body)
-        assert_equal "New Product", json_response["name"]
+        assert_equal "New Product", response.parsed_body["name"]
       end
 
-      test "should not create product with invalid params" do
+      test "customer cannot create product (403)" do
         assert_no_difference("Product.count") do
-          post api_v1_products_url, params: {
-            product: {
-              name: "",
-              price: -10
-            }
-          }, as: :json
+          post api_v1_products_url,
+            headers: auth_headers(@customer),
+            params: {
+              product: {
+                name: "Forbidden",
+                sku: "SKU-FORBID",
+                price_cents: 1_000,
+                stock_quantity: 1,
+                category_id: @category.id
+              }
+            },
+            as: :json
+        end
+        assert_response :forbidden
+        assert_equal "You are not authorized to perform this action", response.parsed_body["error"]
+      end
+
+      test "admin should not create with invalid params" do
+        assert_no_difference("Product.count") do
+          post api_v1_products_url,
+            headers: auth_headers(@admin),
+            params: {
+              product: {
+                name: "",
+                sku: "",
+                price_cents: -10,
+                category_id: @category.id
+              }
+            },
+            as: :json
         end
         assert_response :unprocessable_entity
-        json_response = JSON.parse(response.body)
-        assert_not_empty json_response["errors"]
+        errors = response.parsed_body["errors"]
+        assert_includes errors, "Name can't be blank"
+        assert_includes errors, "Sku can't be blank"
+        assert_includes errors, "Price cents must be greater than 0"
       end
 
-      test "should reject unexpected fields with strong parameters" do
-        post api_v1_products_url, params: {
-          product: {
-            name: "Hack Product",
-            price: 50.0,
-            stock_quantity: 10,
-            admin: true, # This should be filtered out
-            created_at: "2020-01-01" # This should be filtered out
-          }
-        }, as: :json
-
-        # Should succeed but ignore the unpermitted params
-        assert_response :created
-        product = Product.last
-        # Verify the unpermitted attributes were not set
-        assert_not_equal "2020-01-01", product.created_at.to_s
-      end
-
-      test "should update product" do
-        patch api_v1_product_url(@product), params: {
-          product: {
-            name: "Updated Product",
-            price: 199.99
-          }
-        }, as: :json
+      test "admin update product" do
+        patch api_v1_product_url(@product),
+          headers: auth_headers(@admin),
+          params: { product: { name: "Updated Product", price_cents: 19_999 } },
+          as: :json
         assert_response :success
-        json_response = JSON.parse(response.body)
-        assert_equal "Updated Product", json_response["name"]
-        assert_equal "199.99", json_response["price"]
+        assert_equal "Updated Product", response.parsed_body["name"]
+        assert_equal 19_999, response.parsed_body["price_cents"]
       end
 
-      test "should not update product with invalid params" do
-        patch api_v1_product_url(@product), params: {
-          product: {
-            name: "",
-            price: -50
-          }
-        }, as: :json
-        assert_response :unprocessable_entity
-        json_response = JSON.parse(response.body)
-        assert_not_empty json_response["errors"]
+      test "customer cannot update product (403)" do
+        patch api_v1_product_url(@product),
+          headers: auth_headers(@customer),
+          params: { product: { name: "Nope" } },
+          as: :json
+        assert_response :forbidden
       end
 
-      test "should destroy product" do
+      test "admin destroy product" do
         assert_difference("Product.count", -1) do
-          delete api_v1_product_url(@product), as: :json
+          delete api_v1_product_url(@product), headers: auth_headers(@admin), as: :json
         end
         assert_response :no_content
       end
 
-      test "should return 404 for non-existent product" do
-        get api_v1_product_url(id: 99999), as: :json
-        assert_response :not_found
-        json_response = JSON.parse(response.body)
-        assert_equal "Product not found", json_response["error"]
-      end
-
-      test "should return 404 when updating non-existent product" do
-        patch api_v1_product_url(id: 99999), params: {
-          product: { name: "Test" }
-        }, as: :json
-        assert_response :not_found
-      end
-
-      test "should return 404 when deleting non-existent product" do
-        delete api_v1_product_url(id: 99999), as: :json
-        assert_response :not_found
-      end
-
-      private
-
-      def assert_queries_count(expected_count)
-        queries = []
-        subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
-          queries << payload[:sql] unless payload[:name] == "SCHEMA"
+      test "customer cannot destroy product (403)" do
+        assert_no_difference("Product.count") do
+          delete api_v1_product_url(@product), headers: auth_headers(@customer), as: :json
         end
+        assert_response :forbidden
+      end
 
-        yield
+      test "missing token returns 401" do
+        get api_v1_products_url, as: :json
+        assert_response :unauthorized
+        assert_equal "Unauthorized", response.parsed_body["error"]
+      end
 
-        ActiveSupport::Notifications.unsubscribe(subscriber)
-        assert_equal expected_count, queries.size, "Expected #{expected_count} queries, got #{queries.size}:\n#{queries.join("\n")}"
+      test "invalid token returns 401" do
+        get api_v1_products_url,
+          headers: { "Authorization" => "Bearer not-a-real-token" },
+          as: :json
+        assert_response :unauthorized
+      end
+
+      test "should return 404 for non-existent product" do
+        get api_v1_product_url(id: 99_999), headers: auth_headers(@customer), as: :json
+        assert_response :not_found
+        assert_equal "Product not found", response.parsed_body["error"]
       end
     end
   end

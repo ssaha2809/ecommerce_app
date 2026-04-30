@@ -3,6 +3,7 @@ module Api
     class CategoriesController < BaseController
       # GET /api/v1/categories
       def index
+        authorize Category
         @categories = Category.left_joins(:products)
                               .select("categories.*, COUNT(products.id) as products_count")
                               .group("categories.id")

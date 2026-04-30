@@ -21,7 +21,7 @@
         <tr>
           <td><%= product.name %></td>
           <td><%= truncate(product.description, length: 50) %></td>
-          <td>$<%= number_with_precision(product.price, precision: 2) %></td>
+          <td>$<%= number_with_precision(product.price_cents / 100.0, precision: 2) %></td>
           <td><%= product.stock_quantity %></td>
           <td>
             <%= link_to "Show", product, class: "btn btn-sm btn-info" %>

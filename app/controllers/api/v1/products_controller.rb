@@ -1,22 +1,50 @@
 module Api
   module V1
     class ProductsController < BaseController
-      before_action :set_product, only: [ :show, :update, :destroy ]
+      before_action :set_product, only: [ :update, :destroy ]
+
+      DEFAULT_PER_PAGE = 25
+      MAX_PER_PAGE = 100
 
       # GET /api/v1/products
+      # Query params: category_id, min_price, max_price (cents), q, sort, page, per_page
       def index
-        @products = Product.includes(:category).all
-        render json: @products.as_json(include: { category: { only: [ :id, :name ] } }), status: :ok
+        authorize Product
+
+        scope = Product.includes(:category)
+          .by_category(params[:category_id])
+          .price_between(params[:min_price], params[:max_price])
+          .search(params[:q])
+          .sorted_by(params[:sort])
+
+        page = params[:page].presence || 1
+        per_page = [ (params[:per_page].presence || DEFAULT_PER_PAGE).to_i, MAX_PER_PAGE ].min
+        per_page = DEFAULT_PER_PAGE if per_page <= 0
+
+        @products = scope.page(page).per(per_page)
+
+        render json: {
+          products: @products.as_json(include: { category: { only: [ :id, :name ] } }),
+          meta: {
+            current_page: @products.current_page,
+            per_page: per_page,
+            total_pages: @products.total_pages,
+            total_count: @products.total_count
+          }
+        }, status: :ok
       end
 
       # GET /api/v1/products/:id
       def show
-        render json: @product.as_json(include: { category: { only: [ :id, :name ] } }), status: :ok
+        product = Product.includes(:category).find(params[:id])
+        authorize product
+        render json: product.as_json(include: { category: { only: [ :id, :name ] } }), status: :ok
       end
 
       # POST /api/v1/products
       def create
         @product = Product.new(product_params)
+        authorize @product
 
         if @product.save
           render json: @product.as_json(include: { category: { only: [ :id, :name ] } }), status: :created
@@ -27,6 +55,8 @@ module Api
 
       # PATCH /api/v1/products/:id
       def update
+        authorize @product
+
         if @product.update(product_params)
           render json: @product.as_json(include: { category: { only: [ :id, :name ] } }), status: :ok
         else
@@ -36,6 +66,8 @@ module Api
 
       # DELETE /api/v1/products/:id
       def destroy
+        authorize @product
+
         if @product.destroy
           head :no_content
         else
@@ -46,17 +78,11 @@ module Api
       private
 
       def set_product
-        # Only eager load category for show action, not for update/destroy
-        if action_name == "show"
-          @product = Product.includes(:category).find_by(id: params[:id])
-        else
-          @product = Product.find_by(id: params[:id])
-        end
-        render json: { error: "Product not found" }, status: :not_found unless @product
+        @product = Product.find(params[:id])
       end
 
       def product_params
-        params.require(:product).permit(:name, :description, :price, :stock_quantity, :category_id)
+        params.require(:product).permit(:name, :sku, :description, :price_cents, :stock_quantity, :category_id)
       end
     end
   end

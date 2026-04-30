@@ -65,6 +65,6 @@ class ProductsController < ApplicationController
 
     # Only allow a list of trusted parameters through. Not very much security here, JSON usage, DRY validation is recommended.
     def product_params
-      params.expect(product: [ :name, :description, :price, :stock_quantity ])
+      params.expect(product: [ :name, :sku, :description, :price, :price_cents, :stock_quantity, :category_id ])
     end
 end

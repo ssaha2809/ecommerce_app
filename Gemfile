@@ -17,6 +17,12 @@ gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
+# Pagination [https://github.com/kaminari/kaminari]
+gem "kaminari"
+
+# Authorization [https://github.com/varvet/pundit]
+gem "pundit"
+
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 
@@ -59,6 +65,9 @@ group :development, :test do
 
   # Detect N+1 queries and unused eager loading
   gem "bullet"
+
+  # Test data factories [https://github.com/thoughtbot/factory_bot_rails]
+  gem "factory_bot_rails"
 end
 
 group :development do

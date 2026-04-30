@@ -2,7 +2,7 @@ require "test_helper"
 
 class ProductsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @product = products(:one)
+    @product = create(:product)
   end
 
   test "should get index" do
@@ -16,10 +16,19 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create product" do
+    category = create(:category)
     assert_difference("Product.count") do
-      post products_url, params: { product: { description: @product.description, name: @product.name, price: @product.price, stock_quantity: @product.stock_quantity } }
+      post products_url, params: {
+        product: {
+          name: "Brand New",
+          sku: "SKU-WEB-NEW",
+          description: "via web form",
+          price: 19.99,
+          stock_quantity: 5,
+          category_id: category.id
+        }
+      }
     end
-
     assert_redirected_to product_url(Product.last)
   end
 
@@ -34,7 +43,16 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should update product" do
-    patch product_url(@product), params: { product: { description: @product.description, name: @product.name, price: @product.price, stock_quantity: @product.stock_quantity } }
+    patch product_url(@product), params: {
+      product: {
+        name: "Renamed",
+        sku: @product.sku,
+        description: @product.description,
+        price: @product.price,
+        stock_quantity: @product.stock_quantity,
+        category_id: @product.category_id
+      }
+    }
     assert_redirected_to product_url(@product)
   end
 

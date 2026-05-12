@@ -17,7 +17,7 @@ module Api
           .search(params[:q])
           .sorted_by(params[:sort])
 
-        page = params[:page].presence || 1
+        page = [ params[:page].to_i, 1 ].max
         per_page = [ (params[:per_page].presence || DEFAULT_PER_PAGE).to_i, MAX_PER_PAGE ].min
         per_page = DEFAULT_PER_PAGE if per_page <= 0
 

@@ -39,7 +39,7 @@ class Product < ApplicationRecord
   # Dollar-facing accessor for the web form / legacy callers.
   # The canonical column is price_cents; never read it for range queries.
   def price
-    price_cents && (price_cents / 100.0)
+    price_cents / 100.0
   end
 
   def price=(dollars)

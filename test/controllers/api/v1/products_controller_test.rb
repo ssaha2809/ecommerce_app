@@ -18,6 +18,106 @@ module Api
         assert_includes products.map { |p| p["name"] }, @product.name
       end
 
+      test "index includes category name for each product" do
+        get api_v1_products_url, headers: auth_headers(@customer), as: :json
+        assert_response :success
+        product_json = response.parsed_body["products"].find { |p| p["id"] == @product.id }
+        assert_equal @category.name, product_json.dig("category", "name")
+      end
+
+      test "index filters by category_id" do
+        other_category = create(:category, name: "Other Category")
+        create(:product, name: "Other Product", category: other_category)
+
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { category_id: @category.id },
+          as: :json
+        assert_response :success
+        products = response.parsed_body["products"]
+        assert_equal [ @category.id ], products.map { |p| p["category_id"] }.uniq
+      end
+
+      test "index filters by name (q)" do
+        create(:product, name: "Bluetooth Speaker", category: @category)
+        create(:product, name: "Wireless Mouse", category: @category)
+
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { q: "bluetooth" },
+          as: :json
+        assert_response :success
+        names = response.parsed_body["products"].map { |p| p["name"] }
+        assert_equal [ "Bluetooth Speaker" ], names
+      end
+
+      test "index filters by price range" do
+        create(:product, name: "Cheap",  price_cents: 200,    category: @category)
+        create(:product, name: "Mid",    price_cents: 5_000,  category: @category)
+        create(:product, name: "Pricey", price_cents: 50_000, category: @category)
+
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { min_price: 4_000, max_price: 10_000 },
+          as: :json
+        assert_response :success
+        names = response.parsed_body["products"].map { |p| p["name"] }
+        assert_equal [ "Mid" ], names
+      end
+
+      test "index sorts by price_asc" do
+        create(:product, name: "B-Pricey", price_cents: 50_000, category: @category)
+        create(:product, name: "A-Cheap",  price_cents: 100,    category: @category)
+
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { sort: "price_asc" },
+          as: :json
+        assert_response :success
+        prices = response.parsed_body["products"].map { |p| p["price_cents"] }
+        assert_equal prices.sort, prices
+      end
+
+      test "index paginates and returns meta" do
+        create_list(:product, 5, category: @category)
+
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { page: 2, per_page: 2 },
+          as: :json
+        assert_response :success
+        body = response.parsed_body
+        assert_equal 2, body["products"].size
+        assert_equal 2, body.dig("meta", "current_page")
+        assert_equal 2, body.dig("meta", "per_page")
+        assert_equal 6, body.dig("meta", "total_count")
+        assert_equal 3, body.dig("meta", "total_pages")
+      end
+
+      test "index treats invalid page param as page 1" do
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { page: "-3" },
+          as: :json
+        assert_response :success
+        assert_equal 1, response.parsed_body.dig("meta", "current_page")
+      end
+
+      test "index combines filter and sort" do
+        create(:product, name: "Filter-A", price_cents: 800,  category: @category)
+        create(:product, name: "Filter-B", price_cents: 200,  category: @category)
+        other_category = create(:category, name: "Excluded")
+        create(:product, name: "Excluded", price_cents: 100, category: other_category)
+
+        get api_v1_products_url,
+          headers: auth_headers(@customer),
+          params: { category_id: @category.id, q: "Filter-", sort: "price_asc" },
+          as: :json
+        assert_response :success
+        names = response.parsed_body["products"].map { |p| p["name"] }
+        assert_equal [ "Filter-B", "Filter-A" ], names
+      end
+
       test "should show product as customer" do
         get api_v1_product_url(@product), headers: auth_headers(@customer), as: :json
         assert_response :success
@@ -61,6 +161,27 @@ module Api
         end
         assert_response :forbidden
         assert_equal "You are not authorized to perform this action", response.parsed_body["error"]
+      end
+
+      test "create ignores unpermitted parameters" do
+        post api_v1_products_url,
+          headers: auth_headers(@admin),
+          params: {
+            product: {
+              name: "Strong Params Test",
+              sku: "SKU-STRONG-001",
+              price_cents: 1_500,
+              stock_quantity: 5,
+              category_id: @category.id,
+              admin_notes: "should be ignored",
+              id: 999_999
+            }
+          },
+          as: :json
+        assert_response :created
+        body = response.parsed_body
+        assert_not_equal 999_999, body["id"]
+        assert_nil body["admin_notes"]
       end
 
       test "admin should not create with invalid params" do

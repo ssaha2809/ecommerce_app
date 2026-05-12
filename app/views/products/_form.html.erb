@@ -22,7 +22,7 @@
 
   <div class="mb-3">
     <%= form.label :price, class: "form-label" %>
-    <%= form.number_field :price, class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
+    <%= form.number_field :price, value: product.price_cents&.fdiv(100), class: "form-control", step: 0.01, min: 0, placeholder: "0.00" %>
   </div>
 
   <div class="mb-3">

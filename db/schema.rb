@@ -10,7 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_12_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_000005) do
+  create_table "cart_items", force: :cascade do |t|
+    t.integer "cart_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "product_id", null: false
+    t.integer "quantity", default: 1, null: false
+    t.datetime "updated_at", null: false
+    t.index ["cart_id", "product_id"], name: "index_cart_items_on_cart_id_and_product_id", unique: true
+    t.index ["cart_id"], name: "index_cart_items_on_cart_id"
+    t.index ["product_id"], name: "index_cart_items_on_product_id"
+  end
+
+  create_table "carts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id"], name: "index_carts_on_user_id", unique: true
+  end
+
   create_table "categories", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -23,8 +41,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_000001) do
     t.datetime "created_at", null: false
     t.integer "order_id", null: false
     t.integer "product_id", null: false
-    t.integer "quantity", default: 1, null: false
-    t.decimal "unit_price", precision: 10, scale: 2, null: false
+    t.integer "quantity", null: false
+    t.integer "unit_price_cents", null: false
     t.datetime "updated_at", null: false
     t.index ["order_id"], name: "index_order_items_on_order_id"
     t.index ["product_id"], name: "index_order_items_on_product_id"
@@ -33,11 +51,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_000001) do
   create_table "orders", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "customer_address"
-    t.string "customer_email", null: false
-    t.string "customer_name", null: false
+    t.string "customer_email"
+    t.string "customer_name"
     t.string "status", default: "pending"
-    t.decimal "total_amount", precision: 10, scale: 2, default: "0.0"
+    t.integer "total_cents", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id", "created_at"], name: "index_orders_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_orders_on_user_id"
   end
 
   create_table "products", force: :cascade do |t|
@@ -65,7 +86,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_000001) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "cart_items", "carts"
+  add_foreign_key "cart_items", "products"
+  add_foreign_key "carts", "users"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
+  add_foreign_key "orders", "users"
   add_foreign_key "products", "categories"
 end

@@ -52,7 +52,7 @@ module Api
         get api_v1_orders_url, headers: auth_headers(@customer), as: :json
         assert_response :ok
         ids = response.parsed_body.map { |o| o["id"] }
-        assert_equal [my_order.id], ids
+        assert_equal [ my_order.id ], ids
       end
 
       test "GET index as admin returns all orders" do

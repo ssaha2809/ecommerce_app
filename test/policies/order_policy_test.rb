@@ -47,7 +47,7 @@ class OrderPolicyTest < ActiveSupport::TestCase
   test "scope shows customers only their own orders" do
     create(:order, user: @other)
     scoped = OrderPolicy::Scope.new(@owner, Order).resolve
-    assert_equal [@order.id], scoped.pluck(:id)
+    assert_equal [ @order.id ], scoped.pluck(:id)
   end
 
   test "scope shows admin all orders" do

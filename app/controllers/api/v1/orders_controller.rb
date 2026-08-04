@@ -1,7 +1,7 @@
 module Api
   module V1
     class OrdersController < BaseController
-      before_action :set_order, only: [:show, :cancel, :update_status]
+      before_action :set_order, only: [ :show, :cancel, :update_status ]
 
       # GET /api/v1/orders
       def index
@@ -22,9 +22,9 @@ module Api
         order = CheckoutService.new(current_user).call
         render json: serialize_order(order, include_items: true), status: :created
       rescue CheckoutService::EmptyCartError => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       rescue CheckoutService::InsufficientStockError => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/orders/:id/cancel
@@ -33,7 +33,7 @@ module Api
         CancelOrderService.new(@order).call
         render json: serialize_order(@order, include_items: true), status: :ok
       rescue CancelOrderService::CancelError => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/orders/:id/status

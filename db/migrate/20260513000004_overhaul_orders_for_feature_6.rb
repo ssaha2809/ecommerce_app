@@ -18,11 +18,11 @@ class OverhaulOrdersForFeature6 < ActiveRecord::Migration[8.1]
     remove_column :orders, :total_amount, :decimal, precision: 10, scale: 2, default: "0.0"
 
     # Index for the common "list this user's orders" query.
-    add_index :orders, [:user_id, :created_at]
+    add_index :orders, [ :user_id, :created_at ]
   end
 
   def down
-    remove_index  :orders, [:user_id, :created_at]
+    remove_index  :orders, [ :user_id, :created_at ]
     add_column    :orders, :total_amount, :decimal, precision: 10, scale: 2, default: "0.0"
     change_column_null :orders, :customer_email, false
     change_column_null :orders, :customer_name,  false

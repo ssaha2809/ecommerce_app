@@ -1,7 +1,7 @@
 module Api
   module V1
     class CartItemsController < BaseController
-      before_action :set_cart_item, only: [:update, :destroy]
+      before_action :set_cart_item, only: [ :update, :destroy ]
 
       # POST /api/v1/cart/items
       def create
@@ -17,7 +17,7 @@ module Api
       rescue AddToCartService::ProductNotFoundError
         render json: { error: "Product not found" }, status: :not_found
       rescue AddToCartService::InsufficientStockError => e
-        render json: { errors: [e.message] }, status: :unprocessable_entity
+        render json: { errors: [ e.message ] }, status: :unprocessable_entity
       end
 
       # PATCH /api/v1/cart/items/:id
@@ -37,7 +37,7 @@ module Api
         end
 
         if stock_error
-          render json: { errors: [stock_error] }, status: :unprocessable_entity
+          render json: { errors: [ stock_error ] }, status: :unprocessable_entity
         else
           render json: serialize_item(@cart_item), status: :ok
         end

@@ -4,11 +4,21 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :products
       resources :categories, only: [ :index ]
+
+      resource :cart, only: [ :show ] do
+        resources :items, only: [ :create, :update, :destroy ], controller: "cart_items"
+      end
+
+      resources :orders, only: [ :index, :show, :create ] do
+        member do
+          patch :cancel
+          patch :status, action: :update_status
+        end
+      end
     end
   end
 
   # Web routes (keeping existing for now)
-  resources :orders
   resources :products
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

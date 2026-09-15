@@ -2,6 +2,7 @@ class Product < ApplicationRecord
   belongs_to :category
   has_many :order_items, dependent: :restrict_with_error
   has_many :orders, through: :order_items
+  has_many :cart_items, dependent: :destroy
 
   validates :name, presence: true
   validates :sku, presence: true, uniqueness: true

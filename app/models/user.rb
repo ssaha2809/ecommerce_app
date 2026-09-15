@@ -11,7 +11,7 @@ class User < ApplicationRecord
   validates :api_token, presence: true, uniqueness: true
   validates :role,      presence: true
 
-  def cart_or_create!
+  def find_or_create_cart!
     cart || create_cart!
   end
 

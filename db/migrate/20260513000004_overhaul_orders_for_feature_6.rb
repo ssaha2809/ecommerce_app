@@ -9,13 +9,12 @@ class OverhaulOrdersForFeature6 < ActiveRecord::Migration[8.1]
     change_column_null :orders, :user_id, false
 
     add_column :orders, :total_cents, :integer, null: false, default: 0
+    # Legacy decimal total_amount is replaced by total_cents.
+    remove_column :orders, :total_amount, :decimal, precision: 10, scale: 2, default: "0.0"
 
     # customer_* fields become optional snapshot info populated from User at checkout.
     change_column_null :orders, :customer_name,  true
     change_column_null :orders, :customer_email, true
-
-    # Legacy decimal total_amount is replaced by total_cents.
-    remove_column :orders, :total_amount, :decimal, precision: 10, scale: 2, default: "0.0"
 
     # Index for the common "list this user's orders" query.
     add_index :orders, [ :user_id, :created_at ]

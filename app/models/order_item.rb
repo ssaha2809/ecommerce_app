@@ -6,6 +6,6 @@ class OrderItem < ApplicationRecord
   validates :unit_price_cents, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   def subtotal_cents
-    (quantity || 0) * (unit_price_cents || 0)
+    quantity * unit_price_cents
   end
 end

@@ -61,6 +61,19 @@ module Api
         assert_equal 3, item.reload.quantity
       end
 
+      test "PATCH rejects a non-numeric quantity" do
+        cart = create(:cart, user: @user)
+        item = create(:cart_item, cart: cart, product: @product, quantity: 1)
+
+        patch api_v1_cart_item_url(item),
+          headers: auth_headers(@user),
+          params: { quantity: "abc" },
+          as: :json
+
+        assert_response :unprocessable_entity
+        assert_equal 1, item.reload.quantity
+      end
+
       test "PATCH rejects update exceeding stock" do
         cart = create(:cart, user: @user)
         item = create(:cart_item, cart: cart, product: @product, quantity: 1)

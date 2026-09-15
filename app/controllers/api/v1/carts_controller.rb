@@ -3,7 +3,7 @@ module Api
     class CartsController < BaseController
       # GET /api/v1/cart
       def show
-        cart = current_user.cart_or_create!
+        cart = current_user.find_or_create_cart!
         authorize cart
         render json: serialize_cart(cart), status: :ok
       end

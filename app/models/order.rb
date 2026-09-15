@@ -18,8 +18,6 @@ class Order < ApplicationRecord
   has_many :order_items, dependent: :destroy
   has_many :products, through: :order_items
 
-  accepts_nested_attributes_for :order_items
-
   validates :total_cents, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate  :status_transition_allowed, on: :update
 
@@ -31,7 +29,7 @@ class Order < ApplicationRecord
   end
 
   def recalculate_total!
-    self.total_cents = order_items.sum { |i| i.quantity * i.unit_price_cents }
+    self.total_cents = order_items.sum(&:subtotal_cents)
     save!
   end
 

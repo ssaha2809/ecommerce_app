@@ -7,7 +7,7 @@ class CartItem < ApplicationRecord
   validate  :quantity_within_stock
 
   def subtotal_cents
-    (quantity || 0) * (product&.price_cents || 0)
+    quantity * (product&.price_cents || 0)
   end
 
   private

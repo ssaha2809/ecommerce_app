@@ -24,6 +24,10 @@ module Api
       def update
         authorize @cart_item
 
+        unless params[:quantity].to_s.match?(/\A[1-9]\d*\z/)
+          return render json: { errors: [ "Quantity must be a positive integer" ] }, status: :unprocessable_entity
+        end
+
         new_quantity = params[:quantity].to_i
         stock_error = nil
 

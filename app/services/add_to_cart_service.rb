@@ -14,27 +14,37 @@ class AddToCartService
   # product row, verify it can satisfy the combined existing+requested quantity,
   # then upsert the cart item.
   def call
+    raise ArgumentError, "quantity must be positive" unless @quantity.positive?
+
     ActiveRecord::Base.transaction do
-      cart = @user.cart_or_create!
-      product = Product.lock.find_by(id: @product_id)
-      raise ProductNotFoundError if product.nil?
+      product = locked_product
+      cart    = @user.find_or_create_cart!
+      # Built via CartItem.new rather than cart.cart_items.build/find_or_initialize_by:
+      # the latter caches the unsaved record on the association's loaded target,
+      # which survives a transaction rollback and leaves a phantom in-memory item.
+      item    = cart.cart_items.find_by(product_id: product.id) || CartItem.new(cart: cart, product_id: product.id)
 
-      existing = cart.cart_items.find_by(product_id: product.id)
-      already_in_cart = existing&.quantity.to_i
-      target_quantity = already_in_cart + @quantity
+      current_quantity = item.persisted? ? item.quantity : 0
+      item.quantity    = current_quantity + @quantity
+      ensure_stock!(product, item.quantity, current_quantity)
 
-      if target_quantity > product.stock_quantity
-        raise InsufficientStockError,
-              "Only #{product.stock_quantity - already_in_cart} more available"
-      end
+      status = item.new_record? ? :created : :updated
+      item.save!
 
-      if existing
-        existing.update!(quantity: target_quantity)
-        Result.new(cart_item: existing, status: :updated)
-      else
-        item = cart.cart_items.create!(product: product, quantity: @quantity)
-        Result.new(cart_item: item, status: :created)
-      end
+      Result.new(cart_item: item, status: status)
     end
+  end
+
+  private
+
+  def locked_product
+    Product.lock.find_by(id: @product_id) or raise ProductNotFoundError
+  end
+
+  def ensure_stock!(product, target, current_quantity)
+    return if target <= product.stock_quantity
+
+    raise InsufficientStockError,
+          "Only #{product.stock_quantity - current_quantity} more available"
   end
 end

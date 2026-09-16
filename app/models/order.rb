@@ -4,7 +4,7 @@ class Order < ApplicationRecord
 
   ## allow_destroy: true = related model can be destroyed, handy rails feature
 
-  accepts_nested_attributes_for :order_items, allow_destroy: true, reject_if: proc { |attributes| attributes['product_id'].blank? }
+  accepts_nested_attributes_for :order_items, allow_destroy: true, reject_if: proc { |attributes| attributes["product_id"].blank? }
 
   validates :customer_name, presence: true
   validates :customer_email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }

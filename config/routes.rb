@@ -8,7 +8,6 @@ Rails.application.routes.draw do
   end
 
   # Web routes (keeping existing for now)
-  resources :orders
   resources :products
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
